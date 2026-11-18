@@ -1,0 +1,355 @@
+PUMPKIN PANIC - SCRIPTING GUIDE
+===============================
+
+HOW IT WORKS
+You cannot move the character by hand any more. Everything is done by a script written in a Python-like language: press CODE, write your script, press RUN.
+
+Every action function (goto, plant, water, harvest, sell, buy ...) walks the character there by itself and waits until the job is finished. They return True / a number when it worked, and False (with a yellow warning in the console) when it did not.
+
+QUICK START
+  plant(Crop.Turnip)      # walk to empty soil and plant
+  water()                 # water the nearest dry plant
+  harvest()               # pick the nearest ripe crop
+  sell()                  # sell what you carry
+  buy(Item.Saw)           # shopping (you walk into the cabin)
+  for t in tiles(): ...   # look at every tile you own
+
+ERRORS
+CHECK finds mistakes without running (red = error, yellow = warning). While the script runs, an error stops it and shows the line, the error type and a hint in the console. Tap a problem to jump to its line.
+
+PARALLEL THREADS
+spawn(guard, priority=5) runs guard() at the same time as your main code. When two threads want the character, the higher priority one wins and the other waits.
+
+ENDLESS MODE
+When you finish the boat and call sail() you land on the shore of a fresh copy of the island, 1.5x more dangerous every time. Your gear, lives (+1) and half of your coins come with you. Use island() and danger() in your script.
+
+FILES
+Scripts are saved as .py files. A script can use another one: import farm  (loads farm.py) or  from farm import water_all.
+
+LANGUAGE CHEAT SHEET (Python style)
+
+Values:   5   2.5   "text"   True  False  None   [1, 2]   (1, 2)   {"a": 1}   {1, 2}
+Math:     + - * / // % **      comparison: == != < > <= >=   logic: and or not   in / not in
+Assign:   x = 3   x += 1   a, b = b, a   first, *rest = items   items[0] = 9
+Text:     f"coins: {coins()}"   f"{x:.2f}"   "a,b".split(",")   " ".join(list)   s.upper()
+If:       if a: ...  elif b: ...  else: ...      a if cond else b
+Loops:    while cond:   for i in range(5):   for x in items:   break   continue
+Lists:    xs.append(1)  len(xs)  xs[-1]  xs[1:3]  sorted(xs, key=fn)  [x*2 for x in xs if x > 1]
+Dicts:    d = {}  d["k"] = 1  d.get("k", 0)  for k, v in d.items():  {k: v for ...}
+Functions: def f(a, b=2, *rest, **opts):  return a   lambda t: t.dist
+Scope:    inside a function use  global name  to change a module variable
+Errors:   try: ... except ValueError as e: ...   raise Exception("text")   assert x > 0
+Modules:  import farm   from farm import water_all
+Built-ins: print len range min max abs sum round int float str sorted enumerate zip map filter any all
+Math:     sqrt floor ceil sin cos atan2 clamp lerp dist random randint choice shuffle pi
+Not supported: classes, with, yield, import *.
+
+GAME FUNCTIONS
+--------------
+
+== MOVING ==
+  goto(a, b=None)
+      goto(x, y)  /  goto(Place.Well)  /  goto(tile)  /  goto(monster): walk there with path finding. True when you arrived.
+  move(direction, tiles=1)
+      move(North)  /  move(East, 3): walk straight for that many tiles (a tile is 52 units). True if you got all the way.
+  face(direction)
+      turn to look North / South / East / West without moving
+  sprint(on=True)
+      sprint(True) runs faster (uses stamina) until you call sprint(False)
+  auto_walk(on=True)
+      auto_walk(False): actions no longer walk for you - you must stand next to the target yourself
+  pos()
+      your position as (x, y)
+  distance(a, b=None)
+      distance from you to (x, y) / a Place / tile / monster / player
+  inside()
+      True while you are inside the cabin
+
+== FARMING ==
+  plant(crop, tile=None)
+      plant(Crop.Turnip): walk to the nearest empty soil and plant a seed. plant(Crop.Corn, t) plants on tile t. True on success.
+  harvest(tile=None)
+      harvest(): walk to the nearest ripe crop and pick it. harvest(t) picks tile t. True on success.
+  water(tile=None)
+      water(): water the nearest plant that needs it. water(t) waters tile t. Plants only grow while wet!
+  refill()
+      walk to the well and refill the watering can
+  refuel()
+      walk to the oil barrel and refill the lantern oil (costs coins)
+  sell()
+      walk to the sell box and sell all crops and fish you carry. Returns the coins you got.
+  chop(n=1)
+      chop(n): saw n times at the nearest tree (1 wood each). Needs the saw: buy(Item.Saw). Returns the wood you got.
+  fish(n=1)
+      fish(n): go to the dock and catch n fish (reels in bites and scares away monsters with the lamp). Returns the number caught.
+  collect_coins(max=8)
+      walk over the coins lying on the ground (crows drop them). Returns the coins gained.
+  tiles(plot=None)
+      list of all soil tiles you unlocked: for t in tiles(): ...  Tile attributes: index plot x y crop empty growing ready growth water thirsty dist
+  get_tile(index)
+      the tile with this number (0..44)
+  tile_here()
+      the tile you are standing next to, or None
+  can_harvest(tile=None)
+      True if a ripe crop is within reach (or if the given tile is ripe)
+  plots()
+      number of unlocked plots (each has 9 tiles)
+
+== SHOP ==
+  buy(thing, qty=1)
+      buy(Item.Saw) / buy(Item.Lantern) / buy(Crop.Corn) (one seed) / buy(Hat.Crown). Walks into the cabin. Returns how many you bought.
+  buy_seeds(crop, qty=1)
+      buy_seeds(Crop.Pumpkin, 10): buys seeds (uses the cheaper 5-packs). Returns how many seeds you got.
+  wear(hat)
+      wear(Hat.Crown): put on a hat you own (buys it first if it is new)
+  price(thing)
+      price(Item.Saw): coins it costs now, or -1 if it is not available
+  can_afford(thing, qty=1)
+      True if you have the coins (and wood) for this
+  owned(thing)
+      owned(Item.Saw) / owned(Item.Hull) / owned(Hat.Crown): do you have it?
+  level(item)
+      upgrade level 0..3 of Item.Lantern / OilTank / WateringCan / Boots
+
+== SURVIVAL ==
+  lantern(on=True)
+      lantern(True) raises the lantern (burns oil, scares some monsters); lantern(False) lowers it
+  hide(seconds=0)
+      walk into the cabin where most monsters cannot reach you. hide(5) also stays in for 5 seconds (keeps the character busy so lower priority threads cannot walk out).
+  sail()
+      go to the boat and set sail (needs all 4 boat parts and the whole crew nearby). In endless mode you land on the next island.
+  cheer()
+      walk to the waiting clown and cheer it up (+30 coins, and it will not turn blue)
+  revive(who=None)
+      walk to a downed friend and revive them
+  emote(n)
+      show a speech bubble: 0 !  1 ?  2 Help!  3 Run!  4 Thanks
+  monsters()
+      list of the monsters that are out now. Attributes: kind state x y dist hostile waiting
+  threat()
+      True while any monster is hunting or about to hunt
+  crew()
+      list of all players. Attributes: name x y state down alive me bot dist
+  me()
+      yourself as a player object
+
+== STATUS ==
+  coins()
+      the team's coins
+  wood()
+      the team's wood
+  lives()
+      lives left (the run ends at 0)
+  seeds(crop)
+      how many seeds of this crop you have
+  held(crop)
+      how many harvested crops of this kind you carry
+  fish_count()
+      fish you carry
+  carry_value()
+      coins you would get for everything you carry
+  water_left()
+      water in the can (each pour uses 1)
+  water_max()
+      size of the can
+  oil_left()
+      lantern oil left
+  oil_max()
+      size of the oil tank
+  stamina()
+      0..1: how much sprint energy is left
+  alive()
+      False while you are down or dead
+  inventory()
+      dict with everything you have
+
+== WORLD INFO ==
+  time()
+      game seconds since the run began
+  day()
+      day number, starting at 1
+  daytime()
+      "day", "dusk", "night" or "dawn"
+  darkness()
+      0 (bright) .. 1 (pitch black)
+  is_night()
+      True when it is dark
+  time_to_night()
+      seconds until night starts (0 at night)
+  boat_parts()
+      how many of the 4 boat parts are built
+  boat_ready()
+      True when the boat is finished
+  missing_parts()
+      list of boat parts (Item.Hull ...) still to build
+  island()
+      island number: 1 is the first (endless mode counts up)
+  danger()
+      how much harder this island is: 1.0, 1.5, 2.25 ... (endless mode)
+  is_endless()
+      True in endless mode
+  coins_on_ground()
+      list of (x, y, value) of loose coins
+
+== PROGRAM ==
+  wait(seconds)
+      wait(2.5): do nothing for that many game seconds. Other threads keep running.
+  sleep(seconds)
+      same as wait()
+  spawn(*args)
+      spawn(fn, args..., priority=0): run fn in parallel. A higher priority thread gets the character first.
+  join(thread)
+      wait until a spawned thread has finished
+  kill(thread)
+      stop a spawned thread
+  stop()
+      end the whole script
+  save(key, value)
+      remember a value: it survives restarts of the script (and new islands)
+  load(key, default=None)
+      read a value saved with save()
+  last_error()
+      text of the last failed action, or None
+  set_strict(on=True)
+      set_strict(True): failed actions raise an ActionError (catch it with try / except) instead of just warning
+  warn(*values)
+      print a yellow warning in the console
+  clear_log()
+      clear the console
+  exit()
+      same as stop()
+
+== PYTHON BASICS ==
+  print(*values)
+      print(*values, sep=" ", end="\n")  show values in the console
+  len(x)
+      number of items in a list / string / dict
+  range(a, b=None, c=None)
+      range(n) or range(start, stop, step): the numbers for a for loop
+  min(*values)
+      smallest value:  min(a, b)  or  min(list)  or  min(list, key=fn)
+  max(*values)
+      biggest value:  max(a, b)  or  max(list)  or  max(list, key=fn)
+  abs(x)
+      absolute value
+  sum(items, start=0)
+      add up all numbers in a list
+  int(x=0, base=None)
+      convert to a whole number: int("42"), int(3.9) -> 3
+  float(x=0)
+      convert to a decimal number
+  str(x="")
+      convert to text
+  bool(x=False)
+      True / False version of a value
+  round(x, digits=None)
+      round(2.567, 1) -> 2.6
+  sorted(items, key=None, reverse=False)
+      new sorted list:  sorted(tiles(), key=lambda t: t.dist)
+  reversed(items)
+      list in reverse order
+  list(items=None)
+      make a list
+  tuple(items=None)
+      make a tuple
+  dict(*pairs)
+      make a dict:  dict(a=1, b=2)
+  set(items=None)
+      make a set (unique values)
+  enumerate(items, start=0)
+      (index, item) pairs:  for i, x in enumerate(xs):
+  zip(*lists)
+      pair up lists:  for a, b in zip(xs, ys):
+  map(*args)
+      map(fn, items) -> list of fn(item)
+  filter(fn, items)
+      filter(fn, items) -> items where fn(item) is true
+  any(items)
+      True if any item is true
+  all(items)
+      True if all items are true
+  type(x)
+      the type of a value
+  isinstance(x, kind)
+      isinstance(x, int)
+  repr(x)
+      text form of a value, with quotes on strings
+  chr(n)
+      character with this code
+  ord(c)
+      code of a character
+  divmod(a, b)
+      (a // b, a % b)
+  pow(a, b)
+      a to the power b
+  format(x, spec="")
+      format(3.14159, ".2f") -> "3.14"
+  callable(x)
+      is it a function?
+  hasattr(obj, name)
+      does the object have this attribute?
+  getattr(obj, name, default=None)
+      read an attribute by name
+  dir(obj=None)
+      list of attribute names of an object
+  help(what=None)
+      help(plant) prints the description of a function
+
+== MATH ==
+  sqrt(x)
+  floor(x)
+  ceil(x)
+  sin(x)
+  cos(x)
+  tan(x)
+  asin(x)
+  acos(x)
+  atan(x)
+  exp(x)
+  radians(x)
+  degrees(x)
+  sign(x)
+  atan2(y, x)
+  log(x, base=None)
+  hypot(a, b)
+  clamp(x, lo, hi)
+  lerp(a, b, t)
+  dist(x1, y1, x2, y2)
+  random()
+  randint(a, b)
+  randrange(a, b=None)
+  uniform(a, b)
+  choice(items)
+  shuffle(items)
+  sample(items, k)
+  seed(n)
+
+== ERRORS ==
+  Exception(message="")
+  ValueError(message="")
+  TypeError(message="")
+  IndexError(message="")
+  KeyError(message="")
+  ZeroDivisionError(message="")
+  NameError(message="")
+  AttributeError(message="")
+  RuntimeError(message="")
+  AssertionError(message="")
+  ArithmeticError(message="")
+  LookupError(message="")
+  ImportError(message="")
+  StopIteration(message="")
+  MemoryError(message="")
+  RecursionError(message="")
+  UnboundLocalError(message="")
+  OverflowError(message="")
+  ActionError(message="")
+  TimeoutError(message="")
+
+== CONSTANTS ==
+  North South East West   (also Up Down Left Right)
+  Crop.Turnip Carrot Corn Pumpkin Moonbloom   (CROPS lists them all)
+  Item.Lantern OilTank WateringCan Boots Saw PlotKey Hull Engine Propeller FuelCan
+  Hat.NoHat Straw Witch Daisy Beanie Crown Party
+  Place.Well SellBox OilBarrel Workbench Closet Cabin Door Dock Boat Bed Shore
+  TILE (size of a tile: 52)  pi  tau  inf

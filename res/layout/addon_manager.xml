@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- res/layout/addon_manager.xml -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#1A1423"
+    android:orientation="vertical">
+
+    <!-- Header: title, enabled count, close -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingBottom="8dp"
+        android:paddingLeft="16dp"
+        android:paddingRight="8dp"
+        android:paddingTop="12dp">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Addons"
+                android:textColor="#F28C28"
+                android:textSize="26sp"
+                android:textStyle="bold"
+                android:typeface="serif" />
+
+            <TextView
+                android:id="@+id/addonSummary"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#A99BBB"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/addonClose"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Close" />
+    </LinearLayout>
+
+    <!-- List area: list, empty message, busy overlay -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <ListView
+            android:id="@+id/addonList"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:cacheColorHint="#00000000"
+            android:divider="#2E2340"
+            android:dividerHeight="1dp"
+            android:listSelector="#00000000" />
+
+        <TextView
+            android:id="@+id/addonEmpty"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:padding="32dp"
+            android:text="No addons found. Add an addon folder, then tap Re-scan Addons."
+            android:textColor="#A99BBB"
+            android:textSize="15sp"
+            android:visibility="gone" />
+
+        <!-- Dims the list and blocks touches while loading or re-scanning -->
+        <FrameLayout
+            android:id="@+id/addonBusy"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="#991A1423"
+            android:clickable="true"
+            android:visibility="gone">
+
+            <ProgressBar
+                style="?android:attr/progressBarStyleLarge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center" />
+        </FrameLayout>
+    </FrameLayout>
+
+    <Button
+        android:id="@+id/addonRescan"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="12dp"
+        android:text="Re-scan Addons" />
+</LinearLayout>
